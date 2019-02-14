@@ -1,0 +1,15 @@
+#+TITLE: Planar Graph Exercise
+
+Hello, this project contains an exercise for the book Art Of Prolog
+(14.1(vii)).  It is supposed to implement the Hopcroft and Tarjan algorithm
+in order to test whether a graph is planar or not.  In order to implement
+the algorithm, I decided to follow the paper of William Kocay, /The
+Hopcroft-Tarjan Planarity Algorithm/ (October 1993).
+
+In order to make it more exciting, easier to understand, and visually more
+interesting, I decided to draw every step using graphviz.  It seems that
+it's possible that it display the vertices and edges exactly as it needs to
+be in order to draw planar graphs without intersections.
+
+As this algorithm requires several steps, I will make it possible to show
+each step and each value calculated for vertices in the process.

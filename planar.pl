@@ -62,6 +62,35 @@ merge_lists(L1,L2,Comparator,[H2|T3]):-
         L2 = [H2|T2],
         merge_lists(L1,T2,Comparator,T3).
 
+%% accessors
+getAdjKey(Vertex,Key):-
+        term_to_atom(adj-Vertex,Key).
+getAdj(Graph,Vertex,Adj):-
+        getAdjKey(Vertex,Key),
+        Adj = Graph.get(Key).
+setAdj(GraphIn,GraphOut,Vertex,Adj):-
+        getAdjKey(Vertex,Key),
+        GraphOut = GraphIn.put(Key,Adj).
+
+getEdgeTypeKey(From,To,Key):-
+        term_to_atom(edge(From,To),Key).
+getEdgeType(Graph,From,To,Type):-
+        getEdgeTypeKey(From,To,Key),
+        Type = Graph.get(Key).
+setEdgeType(GraphIn,GraphOut,From,To,Type):-
+        getEdgeTypeKey(From,To,Key),
+        GraphOut = GraphIn.put(Key,Type).
+
+getDFNumKey(Vertex,Key):-
+        term_to_atom(dfnum-Vertex,Key).
+getDFNum(Graph,Vertex,DFNum):-
+        getDFNumKey(Vertex,Key),
+        DFNum = Graph.get(Key).
+setDFNum(GraphIn,GraphOut,Vertex,DFNum):-
+        getDFNumKey(Vertex,Key),
+        GraphOut = GraphIn.put(Key,DFNum).
+
+
 %% insert_edges: while creating a new graph, should be called on an empty
 %%   graph.  Inserts edges from a sorted list into the graph dictionary.
 %%   Checks for doubles.  Insert each vertex as an adjacency list.
@@ -69,8 +98,7 @@ merge_lists(L1,L2,Comparator,[H2|T3]):-
 %%   accomplished by two_directions_edges(EdgesIn,EdgesOut).
 insert_edges([edge(From,To)|Tail],CFrom,CList,GraphIn,GraphOut):-
         From \= CFrom,!,
-        term_to_atom(adj-CFrom,Key),
-        Graph1 = GraphIn.put(Key,CList),
+        setAdj(GraphIn,Graph1,CFrom,CList),
         insert_edges(Tail,From,[To],Graph1,GraphOut).
 insert_edges([edge(From,To)|Tail],From,CList,GraphIn,GraphOut):-
         CList = [CTo|_],
@@ -80,38 +108,72 @@ insert_edges([edge(From,To)|Tail],From,CList,GraphIn,GraphOut):-
         CList = [To|_],!,
         insert_edge(Tail,From,CList,GraphIn,GraphOut).
 insert_edges([],CFrom,CList,GraphIn,GraphOut):-
-        term_to_atom(adj-CFrom,Key),
-        GraphOut = GraphIn.put(Key,CList).
+        setAdj(GraphIn,GraphOut,CFrom,CList).
+
+%% DFS that assigns properties to edges: tree-edge or frond
+dfs_fronds(GraphIn,GraphOut,Vertex):-
+        dfs_fronds_rec(GraphIn,GraphOut,Vertex,[],_).
+dfs_fronds_rec(GraphIn,GraphOut,Vertex,AccIn,AccOut):-
+        getAdj(GraphIn,Vertex,Adj),
+        dfs_fronds_list(GraphIn,GraphOut,Vertex,Adj,[Vertex|AccIn],AccOut).
+dfs_fronds_list(GraphIn,GraphOut,Vertex,[H|T],AccIn,AccOut):-
+        member(H,AccIn),!,
+        (   getEdgeType(GraphIn,H,Vertex,EdgeType)
+        ->  setEdgeType(GraphIn,Graph1,Vertex,H,EdgeType)
+        ;   setEdgeType(GraphIn,Graph1,Vertex,H,frond)),
+        dfs_fronds_list(Graph1,GraphOut,Vertex,T,AccIn,AccOut).
+dfs_fronds_list(GraphIn,GraphOut,Vertex,[H|T],AccIn,AccOut):-
+        nonmember(H,AccIn),!,
+        setEdgeType(GraphIn,Graph1,Vertex,H,tree-edge),
+        dfs_fronds_rec(Graph1,Graph2,H,AccIn,Acc1),
+        dfs_fronds_list(Graph2,GraphOut,Vertex,T,Acc1,AccOut).
+dfs_fronds_list(Graph,Graph,_,[],Acc,Acc).
+
+
+dfs_count_vertices(Graph,Vertex,Count):-
+        dfs_count_vertices_rec(Graph,Vertex,[],_,0,Count).
+dfs_count_vertices_rec(G,V,A,AOut,C,COut):-
+        getAdj(G,V,Adj),
+        C1 is C+1,
+        dfs_count_vertices_list(G,Adj,[V|A],AOut,C1,COut).
+dfs_count_vertices_list(G,[H|T],A,AOut,C,COut):-
+        member(H,A),!,
+        dfs_count_vertices_list(G,T,A,AOut,C,COut).
+dfs_count_vertices_list(G,[H|T],A,AOut,C,COut):-
+        nonmember(H,A),!,
+        dfs_count_vertices_rec(G,H,A,A1,C,C1),
+        dfs_count_vertices_list(G,T,A1,AOut,C1,COut).
+dfs_count_vertices_list(_,[],A,A,C,C).
+
+
+dfs_dfnum(GraphIn,GraphOut,Root):-
+        dfs_dfnum_rec(GraphIn,GraphOut,Root,[Root],_,1,_).
+dfs_dfnum_rec(G,GOut,V,A,AOut,N,NOut):-
+        setDFNum(G,G1,V,N),
+        getAdj(G1,V,Adj),
+        dfs_dfnum_list(G1,GOut,Adj,A,AOut,N,NOut).
+dfs_dfnum_list(G,GOut,[H|T],A,AOut,N,NOut):-
+        member(H,A),!,
+        dfs_dfnum_list(G,GOut,T,A,AOut,N,NOut).
+dfs_dfnum_list(G,GOut,[H|T],A,AOut,N,NOut):-
+        nonmember(H,A),!,
+        N1 is N+1,
+        dfs_dfnum_rec(G,G1,H,[H|A],A1,N1,N2),
+        dfs_dfnum_list(G1,GOut,T,A1,AOut,N2,NOut).
+dfs_dfnum_list(G,G,_,A,A,N,N).
+
+
+
 
 test:-
         Edges = [edge(a,d),edge(a,b),edge(b,c),edge(b,d), edge(c,d)],
         edges_to_dict(Edges,GraphDict),
         write(GraphDict),nl,
-        dfs_fronds(a,GraphDict,GraphDict2),
-        write(GraphDict2),nl.
+        dfs_fronds(GraphDict,GraphDict2,a),
+        write(GraphDict2),nl,
+        dfs_count_vertices(GraphDict2,a,Count),
+        write(Count),nl,
+        dfs_dfnum(GraphDict2,GraphDict3,a),
+        write(GraphDict3),nl.
 %%        simple_dot(First,DotString),
 %%        show_dot(DotString).
-
-%% DFS that assigns properties to edges: tree-edge or frond
-dfs_fronds(Vertex,GraphIn,GraphOut):-
-        dfs_fronds_rec(Vertex,[],_,GraphIn,GraphOut).
-dfs_fronds_rec(Vertex,AccIn,AccOut,GraphIn,GraphOut):-
-        term_to_atom(adj-Vertex,Key),
-        Adj = GraphIn.get(Key),
-        dfs_fronds_list(Vertex,Adj,[Vertex|AccIn],AccOut,GraphIn,GraphOut).
-dfs_fronds_list(Vertex,[H|T],AccIn,AccOut,GraphIn,GraphOut):-
-        member(H,AccIn),!,
-        term_to_atom(edge(H,Vertex),BackKey),
-        (   BackEdge = GraphIn.get(BackKey)
-        ->  EdgeType = BackEdge
-        ;   EdgeType = frond),
-        term_to_atom(edge(Vertex,H),Key),
-        Graph1 = GraphIn.put(Key,EdgeType),
-        dfs_fronds_list(Vertex,T,AccIn,AccOut,Graph1,GraphOut).
-dfs_fronds_list(Vertex,[H|T],AccIn,AccOut,GraphIn,GraphOut):-
-        nonmember(H,AccIn),!,
-        term_to_atom(edge(Vertex,H),Key),
-        Graph1 = GraphIn.put(Key,tree-edge),
-        dfs_fronds_rec(H,AccIn,Acc1,Graph1,Graph2),
-        dfs_fronds_list(Vertex,T,Acc1,AccOut,Graph2,GraphOut).
-dfs_fronds_list(_,[],Acc,Acc,Graph,Graph).

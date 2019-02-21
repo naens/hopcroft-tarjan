@@ -91,6 +91,31 @@ setDFNum(GraphIn,GraphOut,Vertex,DFNum):-
         getDFNumKey(Vertex,Key),
         GraphOut = GraphIn.put(Key,DFNum).
 
+getAncestorKey(Vertex,Key):-
+        term_to_atom(ancestor-Vertex,Key).
+getAncestor(Graph,Vertex,Ancestor):-
+        getAncestorKey(Vertex,Key),
+        Ancestor = Graph.get(Key).
+setAncestor(GraphIn,GraphOut,Vertex,Ancestor):-
+        getAncestorKey(Vertex,Key),
+        GraphOut = GraphIn.put(Key,Ancestor).
+
+getTKey(Vertex,Key):-
+        term_to_atom(t-Vertex,Key).
+getT(Graph,Vertex,T):-
+        getTKey(Vertex,Key),
+        T = Graph.get(Key).
+setT(GraphIn,GraphOut,Vertex,T):-
+        getTKey(Vertex,Key),
+        GraphOut = GraphIn.put(Key,T).
+
+
+add_prop(GraphIn,GraphOut,Prop,PropString):-
+        (   VProp = GraphIn.get(vprop)
+        ->  VProp = VProp
+        ;   VProp = []),
+        GraphOut = GraphIn.put(vprop,[[Prop,PropString]|VProp]).
+
 
 %% insert_edges: while creating a new graph, should be called on an empty
 %%   graph.  Inserts edges from a sorted list into the graph dictionary.
@@ -148,13 +173,9 @@ dfs_count_vertices_list(G,[H|T],A,AOut,C,COut):-
         dfs_count_vertices_list(G,T,A1,AOut,C1,COut).
 dfs_count_vertices_list(_,[],A,A,C,C).
 
-
 dfs_dfnum(GraphIn,GraphOut):-
         Root = GraphIn.get(root),
-        (   VProp = GraphIn.get(vprop)
-        ->  VProp = VProp
-        ;   VProp = []),
-        Graph1 = GraphIn.put(vprop,[[dfnum,"D"]|VProp]),
+        add_prop(GraphIn,Graph1,dfnum,"D"),
         dfs_dfnum_rec(Graph1,GraphOut,Root,[Root],_,1,_).
 dfs_dfnum_rec(G,GOut,V,A,AOut,N,NOut):-
         setDFNum(G,G1,V,N),
@@ -180,11 +201,12 @@ dfs_dot(Graph,Out):-
 makeVPropString(G,V,[[P,S]|T],VPropStr):-
         makeVPropString(G,V,T,SubStr),!,
         term_to_atom(P-V,K),
-        Val = G.get(K),
-        string_concat(S,":",S1),
-        string_concat(S1,Val,S2),
-        string_concat(S2,"\\n",S3),
-        string_concat(S3,SubStr,VPropStr).
+        (   Val = G.get(K)
+        ->  string_concat(S,":",S1),
+            string_concat(S1,Val,S2),
+            string_concat(S2,"\\n",S3),
+            string_concat(S3,SubStr,VPropStr)
+        ;   VPropStr = "").
 makeVPropString(_,_,[],"").
 makeVString(V,VPropStr,VStr):-
         string_concat("    ",V,S1),
@@ -242,15 +264,68 @@ dfs_dot_list(G,V,[H|T],A,AOut,Out):-
         dfs_dot_list(G,V,T,A1,AOut,Out).
 dfs_dot_list(_,_,[],A,A,_).
 
+dfs_ancestor(GraphIn,GraphOut):-
+        Root = GraphIn.get(root),
+        add_prop(GraphIn,Graph1,ancestor,"ancestor"),
+        dfs_ancestor_rec(Graph1,GraphOut,Root,[],_).
+dfs_ancestor_rec(G,GOut,V,A,AOut):-
+        getAdj(G,V,Adj),
+        dfs_ancestor_list(G,GOut,V,Adj,[V|A],AOut).
+dfs_ancestor_list(G,GOut,V,[H|T],A,AOut):-
+        member(H,A),!,
+        dfs_ancestor_list(G,GOut,V,T,A,AOut).
+dfs_ancestor_list(G,GOut,V,[H|T],A,AOut):-
+        nonmember(H,A),
+        getEdgeType(G,V,H,frond),!,
+        dfs_ancestor_list(G,GOut,V,T,A,AOut).
+dfs_ancestor_list(G,GOut,V,[H|T],A,AOut):-
+        nonmember(H,A),
+        getEdgeType(G,V,H,tree-edge),!,
+        setAncestor(G,G1,H,V),
+        dfs_ancestor_rec(G1,G2,H,A,A2),
+        dfs_ancestor_list(G2,GOut,V,T,A2,AOut).
+dfs_ancestor_list(G,G,_,[],A,A).
+
+
+dfs_t(GraphIn,GraphOut):-
+        Root = GraphIn.get(root),
+        add_prop(GraphIn,Graph1,t,"T"),
+        dfs_t_rec(Graph1,GraphOut,Root,[],_,_).
+dfs_t_rec(G,GOut,V,A,AOut,T_Res):-
+        getAdj(G,V,Adj),
+        dfs_t_list(G,G1,V,Adj,[V|A],AOut,[],T),
+        union([V],T,T_Res),
+        setT(G1,GOut,V,T_Res).
+dfs_t_list(G,GOut,V,[H|T],A,AOut,T_In,T_Out):-
+        member(H,A),!,
+        dfs_t_list(G,GOut,V,T,A,AOut,T_In,T_Out).
+dfs_t_list(G,GOut,V,[H|T],A,AOut,T_In,T_Out):-
+        nonmember(H,A),
+        getEdgeType(G,V,H,frond),!,
+        union([H],T_In,T_1),
+        dfs_t_list(G,GOut,V,T,A,AOut,T_1,T_Out).
+dfs_t_list(G,GOut,V,[H|T],A,AOut,T_In,T_Out):-
+        nonmember(H,A),
+        getEdgeType(G,V,H,tree-edge),!,
+        union([H],T_In,T_1),
+        dfs_t_rec(G,G1,H,A,A1,T_H),
+        union(T_1,T_H,T_2),
+        dfs_t_list(G1,GOut,V,T,A1,AOut,T_2,T_Out).
+dfs_t_list(G,G,_,[],A,A,T,T).
+
+
+
 
 test:-
         Edges = [edge(a,d),edge(a,b),edge(b,c),edge(b,d), edge(c,d)],
         edges_to_dict(Edges,GraphDict),
-        write(GraphDict),nl,
-        dfs_fronds(GraphDict,GraphDict2),
-        write(GraphDict2),nl,
-        dfs_count_vertices(GraphDict2,Count),
-        write(Count),nl,
-        dfs_dfnum(GraphDict2,GraphDict3),
-        write(GraphDict3),nl,!,
-        show_dot(GraphDict3).
+%%        write(GraphDict),nl,
+        dfs_fronds(GraphDict,G2),
+%%        write(G2),nl,
+%%        dfs_count_vertices(G2,Count),
+%%        write(Count),nl,
+        dfs_dfnum(G2,G3),
+        write(G3),nl,
+        dfs_ancestor(G3,G4),
+        write(G4),nl,
+        show_dot(G4).

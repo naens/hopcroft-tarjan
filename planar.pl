@@ -2,8 +2,8 @@ show_dot(Graph):-
         open('/tmp/swipl_g.dot',write,Out),
         dfs_dot(Graph,Out),
         close(Out),
-        shell('dot -Tpng /tmp/swipl_g.dot -o /tmp/swipl_g.png'),
-        shell('feh /tmp/swipl_g.png').
+        shell('dot -Tsvg /tmp/swipl_g.dot -o /tmp/swipl_g.svg'),
+        shell('eog /tmp/swipl_g.svg').
 
 nonmember(_,[]).
 nonmember(X,[H|T]):-
@@ -203,16 +203,17 @@ makeVPropString(G,V,[[P,S]|T],VPropStr):-
         term_to_atom(P-V,K),
         (   Val = G.get(K)
         ->  string_concat(S,":",S1),
-            string_concat(S1,Val,S2),
-            string_concat(S2,"\\n",S3),
+            term_to_atom(Val,ValAtom),
+            string_concat(S1,ValAtom,S2),
+            string_concat(S2,"<br/>",S3),
             string_concat(S3,SubStr,VPropStr)
         ;   VPropStr = "").
 makeVPropString(_,_,[],"").
 makeVString(V,VPropStr,VStr):-
         string_concat("    ",V,S1),
-        string_concat(S1," [xlabel=\"",S2),
+        string_concat(S1," [xlabel=<<FONT POINT-SIZE=\"12\">",S2),
         string_concat(S2,VPropStr,S3),
-        string_concat(S3,"\"]\n",VStr).
+        string_concat(S3,"</FONT>>]\n",VStr).
 dfs_dot_rec(G,V,A,AOut,Out):-
         VProp = G.get(vprop),
         makeVPropString(G,V,VProp,VPropStr),
@@ -236,13 +237,8 @@ makeEString(From,To,_,EString):-
         string_concat(S2,To,S3),
         string_concat(S3,"\n",EString).
 minmax(A,B,B,A):-
-        term_string(A,AS),
-        term_string(B,BS),
-        AS > BS,!.
-minmax(A,B,A,B):-
-        term_string(A,AS),
-        term_string(B,BS),
-        \+ AS > BS.
+        atom_greater(A,B),!.
+minmax(A,B,A,B).
 dfs_dot_list(G,V,[H|T],A,AOut,Out):-
         minmax(V,H,Min,Max),
         member(edge(Min,Max),A),!,
@@ -286,32 +282,72 @@ dfs_ancestor_list(G,GOut,V,[H|T],A,AOut):-
         dfs_ancestor_list(G2,GOut,V,T,A2,AOut).
 dfs_ancestor_list(G,G,_,[],A,A).
 
+insert(H,[],[H]):-!.
+insert(H,[H|T],[H|T]):-!.
+insert(X,[H|T],[H|T2]):-
+        atom_greater(X,H),!,
+        insert(X,T,T2).
+insert(X,[H|T],[X,H|T]).
+
+insert_all([],L,L).
+insert_all([H|T],L,R):-
+        insert(H,L,L1),
+        insert_all(T,L1,R).
 
 dfs_t(GraphIn,GraphOut):-
         Root = GraphIn.get(root),
         add_prop(GraphIn,Graph1,t,"T"),
         dfs_t_rec(Graph1,GraphOut,Root,[],_,_).
-dfs_t_rec(G,GOut,V,A,AOut,T_Res):-
+dfs_t_rec(G,GOut,V,A,AOut,T_Out):-
         getAdj(G,V,Adj),
-        dfs_t_list(G,G1,V,Adj,[V|A],AOut,[],T),
-        union([V],T,T_Res),
-        setT(G1,GOut,V,T_Res).
+        dfs_t_list(G,G1,V,Adj,[V|A],AOut,[],T_1),
+        insert(V,T_1,T_Out),
+        setT(G1,GOut,V,T_Out).
 dfs_t_list(G,GOut,V,[H|T],A,AOut,T_In,T_Out):-
+        getEdgeType(G,V,H,tree-edge),
+        nonmember(H,A),!,
+        insert(H,T_In,T_1),
+        dfs_t_rec(G,G1,H,A,A1,T_H),
+        insert_all(T_H,T_1,T_2),
+        dfs_t_list(G1,GOut,V,T,A1,AOut,T_2,T_Out).
+dfs_t_list(G,GOut,V,[H|T],A,AOut,T_In,T_Out):-
+        getEdgeType(G,V,H,tree-edge),
         member(H,A),!,
-        dfs_t_list(G,GOut,V,T,A,AOut,T_In,T_Out).
-dfs_t_list(G,GOut,V,[H|T],A,AOut,T_In,T_Out):-
-        nonmember(H,A),
-        getEdgeType(G,V,H,frond),!,
-        union([H],T_In,T_1),
+        insert(H,T_In,T_1),
         dfs_t_list(G,GOut,V,T,A,AOut,T_1,T_Out).
 dfs_t_list(G,GOut,V,[H|T],A,AOut,T_In,T_Out):-
-        nonmember(H,A),
-        getEdgeType(G,V,H,tree-edge),!,
-        union([H],T_In,T_1),
-        dfs_t_rec(G,G1,H,A,A1,T_H),
-        union(T_1,T_H,T_2),
-        dfs_t_list(G1,GOut,V,T,A1,AOut,T_2,T_Out).
+        getEdgeType(G,V,H,frond),!,
+        insert(H,T_In,T_1),
+        dfs_t_list(G,GOut,V,T,A,AOut,T_1,T_Out).
 dfs_t_list(G,G,_,[],A,A,T,T).
+
+
+graph1([
+        edge(a,b),
+        edge(a,h),
+        edge(a,i),
+        edge(a,l),
+        edge(b,c),
+        edge(b,j),
+        edge(b,l),
+        edge(c,d),
+        edge(c,j),
+        edge(c,k),
+        edge(d,e),
+        edge(d,k),
+        edge(d,l),
+        edge(e,f),
+        edge(e,i),
+        edge(e,l),
+        edge(f,g),
+        edge(f,i),
+        edge(f,k),
+        edge(g,h),
+        edge(g,j),
+        edge(g,k),
+        edge(h,i),
+        edge(h,j)
+       ]).
 
 
 
@@ -325,7 +361,18 @@ test:-
 %%        dfs_count_vertices(G2,Count),
 %%        write(Count),nl,
         dfs_dfnum(G2,G3),
-        write(G3),nl,
+%        write(G3),nl,
         dfs_ancestor(G3,G4),
-        write(G4),nl,
-        show_dot(G4).
+%        write(G4),nl,
+        dfs_t(G4,G5),
+%        write(G5),nl,
+        show_dot(G5).
+
+test1:-
+        graph1(Edges),
+        edges_to_dict(Edges,G0),
+        dfs_fronds(G0,G2),
+        dfs_dfnum(G2,G3),
+        dfs_ancestor(G3,G4),
+        dfs_t(G4,G5),
+        show_dot(G5).

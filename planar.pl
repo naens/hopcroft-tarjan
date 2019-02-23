@@ -1,9 +1,40 @@
 show_dot(Graph):-
+        VPropList = Graph.get(vprop),
+        EPropList = Graph.get(eprop),
+        show_dot(Graph,VPropList,EPropList).
+show_dot(Graph,List):-
+        properties_from_list(Graph,List,VPropList,EPropList),
+        show_dot(Graph,VPropList,EPropList).
+show_dot(Graph,VPropList,EPropList):-
         open('/tmp/swipl_g.dot',write,Out),
-        dfs_dot(Graph,Out),
+        dfs_dot(Graph,VPropList,EPropList,Out),
         close(Out),
         shell('dot -Tsvg /tmp/swipl_g.dot -o /tmp/swipl_g.svg'),
         shell('eog /tmp/swipl_g.svg').
+
+todo(_).
+todo(_,_).
+todo(_,_,_).
+todo(_,_,_,_).
+todo(_,_,_,_,_).
+
+memberget(X,[X|_],X).
+memberget(X,[H|T],Y):-
+        X \= H,!,
+        memberget(X,T,Y).
+
+properties_from_list(Graph,List,VPropList,EPropList):-
+        AllVProp = Graph.get(vprop),
+        AllEProp = Graph.get(eprop),
+        pfl_rec(List,AllVProp,AllEProp,VPropList,EPropList).
+pfl_rec([H|T],Vs,Es,[V|V1],EOut):-
+        memberget([H,_],Vs,V),!,
+        pfl_rec(T,Vs,Es,V1,EOut).
+pfl_rec([H|T],Vs,Es,VOut,[E|E1]):-
+        memberget([H,_],Es,E),!,
+        pfl_rec(T,Vs,Es,VOut,E1).
+pfl_rec([],_,_,[],[]).
+
 
 nonmember(_,[]).
 nonmember(X,[H|T]):-
@@ -25,7 +56,9 @@ edges_to_dict(Edges,GraphDict):-
         GraphIn = graph_dict{},
         SortedEdges = [edge(From,To)|Tail],
         insert_edges(Tail,From,[To],GraphIn,Graph1),
-        GraphDict = Graph1.put(root,From).
+        Graph2 = Graph1.put(vprop,[]),
+        Graph3 = Graph2.put(eprop,[]),
+        GraphDict = Graph3.put(root,From).
 
 intlist_greater([H1|_],[H2|_]):-
         H1 > H2,!.
@@ -110,11 +143,15 @@ setT(GraphIn,GraphOut,Vertex,T):-
         GraphOut = GraphIn.put(Key,T).
 
 
-add_prop(GraphIn,GraphOut,Prop,PropString):-
-        (   VProp = GraphIn.get(vprop)
-        ->  VProp = VProp
-        ;   VProp = []),
-        GraphOut = GraphIn.put(vprop,[[Prop,PropString]|VProp]).
+%% vprop and eprop are initialized to []
+add_vertex_property(GraphIn,GraphOut,VPropKey,VPropString):-
+        VPropList = GraphIn.get(vprop),
+        VProp = [VPropKey,VPropString],
+        GraphOut = GraphIn.put(vprop,[VProp|VPropList]).
+add_edge_property(GraphIn,GraphOut,EPropKey,EPropString):-
+        EPropList = GraphIn.get(eprop),
+        EProp = [EPropKey,EPropString],
+        GraphOut = GraphIn.put(eprop,[EProp|EPropList]).
 
 
 %% insert_edges: while creating a new graph, should be called on an empty
@@ -175,7 +212,7 @@ dfs_count_vertices_list(_,[],A,A,C,C).
 
 dfs_dfnum(GraphIn,GraphOut):-
         Root = GraphIn.get(root),
-        add_prop(GraphIn,Graph1,dfnum,"D"),
+        add_vertex_property(GraphIn,Graph1,dfnum,"D"),
         dfs_dfnum_rec(Graph1,GraphOut,Root,[Root],_,1,_).
 dfs_dfnum_rec(G,GOut,V,A,AOut,N,NOut):-
         setDFNum(G,G1,V,N),
@@ -193,10 +230,10 @@ dfs_dfnum_list(G,G,_,A,A,N,N).
 
 
 %% dfs_dot: write dot representation of the graph to file
-dfs_dot(Graph,Out):-
+dfs_dot(Graph,VPropList,EPropList,Out):-
         write(Out,"graph {\n"),
         Root = Graph.get(root),
-        dfs_dot_rec(Graph,Root,[],_,Out),
+        dfs_dot_rec(Graph,VPropList,EPropList,Root,[],_,Out),
         write(Out,"}\n").
 makeVPropString(G,V,[[P,S]|T],VPropStr):-
         makeVPropString(G,V,T,SubStr),!,
@@ -209,29 +246,34 @@ makeVPropString(G,V,[[P,S]|T],VPropStr):-
             string_concat(S3,SubStr,VPropStr)
         ;   VPropStr = "").
 makeVPropString(_,_,[],"").
+makeVString(V,"",VStr):-
+        string_concat("    ",V,VStr),!.
 makeVString(V,VPropStr,VStr):-
         string_concat("    ",V,S1),
         string_concat(S1," [xlabel=<<FONT POINT-SIZE=\"12\">",S2),
         string_concat(S2,VPropStr,S3),
         string_concat(S3,"</FONT>>]\n",VStr).
-dfs_dot_rec(G,V,A,AOut,Out):-
-        VProp = G.get(vprop),
-        makeVPropString(G,V,VProp,VPropStr),
+dfs_dot_rec(G,Vs,Es,V,A,AOut,Out):-
+        makeVPropString(G,V,Vs,VPropStr),
         makeVString(V,VPropStr,VStr),
         write(Out,VStr),
         getAdj(G,V,Adj),
-        dfs_dot_list(G,V,Adj,A,AOut,Out).
-makeEString(From,To,frond,EString):-
+        dfs_dot_list(G,Vs,Es,V,Adj,A,AOut,Out).
+makeEPropString(G,From,To,EPropList,EPropString):-
+        todo(G,From,To,EPropList,EPropString).
+makeEString(From,To,frond,EString,EPropString):-
         string_concat("    ",From,S1),
         string_concat(S1," -- ",S2),
         string_concat(S2,To,S3),
+        todo(EPropString),
         string_concat(S3," [style=dashed]\n",EString),!.
-makeEString(From,To,tree-edge,EString):-
+makeEString(From,To,tree-edge,EString,EPropString):-
         string_concat("    ",From,S1),
         string_concat(S1," -- ",S2),
         string_concat(S2,To,S3),
+        todo(EPropString),
         string_concat(S3," [penwidth=1.5]\n",EString),!.
-makeEString(From,To,_,EString):-
+makeEString(From,To,_,EString,_):-
         string_concat("    ",From,S1),
         string_concat(S1," -- ",S2),
         string_concat(S2,To,S3),
@@ -239,30 +281,32 @@ makeEString(From,To,_,EString):-
 minmax(A,B,B,A):-
         atom_greater(A,B),!.
 minmax(A,B,A,B).
-dfs_dot_list(G,V,[H|T],A,AOut,Out):-
+dfs_dot_list(G,Vs,Es,V,[H|T],A,AOut,Out):-
         minmax(V,H,Min,Max),
         member(edge(Min,Max),A),!,
-        dfs_dot_list(G,V,T,A,AOut,Out).
-dfs_dot_list(G,V,[H|T],A,AOut,Out):-
+        dfs_dot_list(G,Vs,Es,V,T,A,AOut,Out).
+dfs_dot_list(G,Vs,Es,V,[H|T],A,AOut,Out):-
         minmax(V,H,Min,Max),
         nonmember(edge(Min,Max),A),
         getEdgeType(G,V,H,frond),!,
-        makeEString(V,H,frond,EString),
+        makeEPropString(G,V,H,Es,EPropString),
+        makeEString(V,H,frond,EString,EPropString),
         write(Out,EString),
-        dfs_dot_list(G,V,T,[edge(Min,Max)|A],AOut,Out).
-dfs_dot_list(G,V,[H|T],A,AOut,Out):-
+        dfs_dot_list(G,Vs,Es,V,T,[edge(Min,Max)|A],AOut,Out).
+dfs_dot_list(G,Vs,Es,V,[H|T],A,AOut,Out):-
         minmax(V,H,Min,Max),
         nonmember(edge(Min,Max),A),
         getEdgeType(G,V,H,tree-edge),!,
-        makeEString(V,H,tree-edge,EString),
+        makeEPropString(G,V,H,Es,EPropString),
+        makeEString(V,H,tree-edge,EString,EPropString),
         write(Out,EString),
-        dfs_dot_rec(G,H,[edge(Min,Max)|A],A1,Out),
-        dfs_dot_list(G,V,T,A1,AOut,Out).
-dfs_dot_list(_,_,[],A,A,_).
+        dfs_dot_rec(G,Vs,Es,H,[edge(Min,Max)|A],A1,Out),
+        dfs_dot_list(G,Vs,Es,V,T,A1,AOut,Out).
+dfs_dot_list(_,_,_,_,[],A,A,_).
 
 dfs_ancestor(GraphIn,GraphOut):-
         Root = GraphIn.get(root),
-        add_prop(GraphIn,Graph1,ancestor,"ancestor"),
+        add_vertex_property(GraphIn,Graph1,ancestor,"ancestor"),
         dfs_ancestor_rec(Graph1,GraphOut,Root,[],_).
 dfs_ancestor_rec(G,GOut,V,A,AOut):-
         getAdj(G,V,Adj),
@@ -296,7 +340,7 @@ insert_all([H|T],L,R):-
 
 dfs_t(GraphIn,GraphOut):-
         Root = GraphIn.get(root),
-        add_prop(GraphIn,Graph1,t,"T"),
+        add_vertex_property(GraphIn,Graph1,t,"T"),
         dfs_t_rec(Graph1,GraphOut,Root,[],_,_).
 dfs_t_rec(G,GOut,V,A,AOut,T_Out):-
         getAdj(G,V,Adj),
@@ -375,4 +419,4 @@ test1:-
         dfs_dfnum(G2,G3),
         dfs_ancestor(G3,G4),
         dfs_t(G4,G5),
-        show_dot(G5).
+        show_dot(G5,[dfnum]).

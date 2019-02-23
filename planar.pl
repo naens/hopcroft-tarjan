@@ -64,7 +64,7 @@ intlist_greater([H1|_],[H2|_]):-
         H1 > H2,!.
 intlist_greater([H|T1],[H|T2]):-
         intlist_greater(T1,T2).
-intlist_greater([_],[]).
+intlist_greater([_|_],[]).
 
 atom_greater(A,B):-
         atom_string(A,AString),
@@ -161,7 +161,8 @@ add_edge_property(GraphIn,GraphOut,EPropKey,EPropString):-
 %%   accomplished by two_directions_edges(EdgesIn,EdgesOut).
 insert_edges([edge(From,To)|Tail],CFrom,CList,GraphIn,GraphOut):-
         From \= CFrom,!,
-        setAdj(GraphIn,Graph1,CFrom,CList),
+        reverse(CList,CListR),
+        setAdj(GraphIn,Graph1,CFrom,CListR),
         insert_edges(Tail,From,[To],Graph1,GraphOut).
 insert_edges([edge(From,To)|Tail],From,CList,GraphIn,GraphOut):-
         CList = [CTo|_],
@@ -169,9 +170,10 @@ insert_edges([edge(From,To)|Tail],From,CList,GraphIn,GraphOut):-
         insert_edges(Tail,From,[To|CList],GraphIn,GraphOut).
 insert_edges([edge(From,To)|Tail],From,CList,GraphIn,GraphOut):-
         CList = [To|_],!,
-        insert_edge(Tail,From,CList,GraphIn,GraphOut).
+        insert_edges(Tail,From,CList,GraphIn,GraphOut).
 insert_edges([],CFrom,CList,GraphIn,GraphOut):-
-        setAdj(GraphIn,GraphOut,CFrom,CList).
+        reverse(CList,CListR),
+        setAdj(GraphIn,GraphOut,CFrom,CListR).
 
 %% DFS that assigns properties to edges: tree-edge or frond
 dfs_fronds(GraphIn,GraphOut):-
@@ -412,11 +414,41 @@ test:-
 %        write(G5),nl,
         show_dot(G5).
 
+graph2([
+        edge(0,a),
+        edge(a,b),
+        edge(b,u),
+
+        edge(u,uv),
+        edge(uv,y),
+        edge(y,a),
+        edge(y,b),
+        edge(y,s),
+        edge(s,a),
+
+        edge(u,a),
+
+        edge(u,x),
+        edge(x,c),
+        edge(c,0),
+
+        edge(u,w),
+        edge(u,w),
+        edge(w,wt),
+        edge(wt,u),
+        edge(wt,b),
+
+        edge(u,b)
+
+
+       ]).
+
 test1:-
-        graph1(Edges),
+        graph2(Edges),
         edges_to_dict(Edges,G0),
+        write(G0),
         dfs_fronds(G0,G2),
         dfs_dfnum(G2,G3),
         dfs_ancestor(G3,G4),
         dfs_t(G4,G5),
-        show_dot(G5,[dfnum]).
+        show_dot(G5,[dfnum,t]).

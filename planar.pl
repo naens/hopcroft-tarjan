@@ -142,6 +142,33 @@ setT(GraphIn,GraphOut,Vertex,T):-
         getTKey(Vertex,Key),
         GraphOut = GraphIn.put(Key,T).
 
+getL1Key(V,K):-
+        term_to_atom(l1-V,K).
+getL1(G,V,L1):-
+        getL1Key(V,K),
+        L1 = G.get(K).
+setL1(G,GOut,V,L1):-
+        getL1Key(V,K),
+        GOut = G.put(K,L1).
+
+getL2Key(V,K):-
+        term_to_atom(l2-V,K).
+getL2(G,V,L2):-
+        getL2Key(V,K),
+        L2 = G.get(K).
+setL2(G,GOut,V,L2):-
+        getL2Key(V,K),
+        GOut = G.put(K,L2).
+
+getEdgeWeightKey(V1,V2,K):-
+        term_to_atom(w-(V1,V2),K).
+getEdgeWeight(G,V1,V2,W):-
+        getEdgeWeightKey(V1,V2,K),
+        W = G.get(K).
+setEdgeWeight(G,GOut,V1,V2,W):-
+        getEdgeWeightKey(V1,V2,K),
+        GOut = G.put(K,W).
+
 
 %% vprop and eprop are initialized to []
 add_vertex_property(GraphIn,GraphOut,VPropKey,VPropString):-
@@ -252,7 +279,7 @@ makeVString(V,"",VStr):-
         string_concat("    ",V,VStr),!.
 makeVString(V,VPropStr,VStr):-
         string_concat("    ",V,S1),
-        string_concat(S1," [xlabel=<<FONT POINT-SIZE=\"12\">",S2),
+        string_concat(S1," [xlabel=<<FONT POINT-SIZE=\"12\">",S2), % use label?
         string_concat(S2,VPropStr,S3),
         string_concat(S3,"</FONT>>]\n",VStr).
 dfs_dot_rec(G,Vs,Es,V,A,AOut,Out):-
@@ -261,20 +288,38 @@ dfs_dot_rec(G,Vs,Es,V,A,AOut,Out):-
         write(Out,VStr),
         getAdj(G,V,Adj),
         dfs_dot_list(G,Vs,Es,V,Adj,A,AOut,Out).
-makeEPropString(G,From,To,EPropList,EPropString):-
-        todo(G,From,To,EPropList,EPropString).
+%% TODO: what if other direction???
+makeEPropString(G,From,To,[[P,S]|T],EPropString):-
+        makeEPropString(G,From,To,T,SubStr),!,
+        term_to_atom(P-(From,To),K),
+        (   Val = G.get(K)
+        ->  string_concat(S,":",S1),
+            term_to_atom(Val,ValAtom),
+            string_concat(S1,ValAtom,S2),
+            string_concat(S2,"<br/>",S3),
+            string_concat(S3,SubStr,EPropString)
+        ;   EPropString = "").
+makeEPropString(_,_,_,[],"").
+makeELabelString("","").
+makeELabelString(EPropString,LabelString):-
+        EPropString \= "",
+        string_concat(" [label=<",EPropString,Lab1),
+        string_concat(Lab1,">]",LabelString).
 makeEString(From,To,frond,EString,EPropString):-
         string_concat("    ",From,S1),
         string_concat(S1," -- ",S2),
         string_concat(S2,To,S3),
-        todo(EPropString),
-        string_concat(S3," [style=dashed]\n",EString),!.
+        makeELabelString(EPropString,LabelString),
+        string_concat(S3,LabelString,S4),
+        string_concat(S4," [style=dashed]\n",EString),!.
 makeEString(From,To,tree-edge,EString,EPropString):-
         string_concat("    ",From,S1),
         string_concat(S1," -- ",S2),
         string_concat(S2,To,S3),
-        todo(EPropString),
-        string_concat(S3," [penwidth=1.5]\n",EString),!.
+        string_concat(S3," [penwidth=1.5]",S4),!,
+        makeELabelString(EPropString,LabelString),
+        string_concat(S4,LabelString,S5),
+        string_concat(S5,"\n",EString).
 makeEString(From,To,_,EString,_):-
         string_concat("    ",From,S1),
         string_concat(S1," -- ",S2),
@@ -368,6 +413,100 @@ dfs_t_list(G,GOut,V,[H|T],A,AOut,T_In,T_Out):-
 dfs_t_list(G,G,_,[],A,A,T,T).
 
 
+skip([H|T],H,R):-
+        skip(T,H,R),!.
+skip([H|T],X,[H|T]):-
+        X \= H.
+skip([],_,[]).
+
+%% get minimum number R from List not equal to X
+min_ne(List,X,R):-
+        skip(List,X,[H|T]),
+        min_ne_rec(T,X,H,R).
+min_ne_rec([H|T],H,A,R):-
+        min_ne_rec(T,H,A,R),!.
+min_ne_rec([H|T],X,A,R):-
+        X \= H,
+        A > H,!,
+        min_ne_rec(T,X,H,R).
+min_ne_rec([H|T],X,A,R):-
+        X \= H,
+        A =< H,!,
+        min_ne_rec(T,X,A,R).
+min_ne_rec([],_,A,A).
+
+min(X,X,X):-!.
+min(X1,X2,X1):-
+        X1 =< X2,!.
+min(X1,X2,X2):-
+        X1 > X2.
+
+%% get L1 and L2 properties and set them for every vertex
+dfs_l1l2(G,GOut):-
+        Root = G.get(root),
+        add_vertex_property(G,G1,l1,"L1"),
+        add_vertex_property(G1,G2,l2,"L2"),
+        dfs_l1l2_rec(G2,GOut,Root,Root,[],_,_,_).
+dfs_l1l2_rec(G,GOut,P,V,A,AOut,L1,L2):-
+        getAdj(G,V,Adj),
+        getDFNum(G,P,PNum),
+        getDFNum(G,V,VNum),
+        dfs_l1l2_list(G,G1,V,Adj,[V|A],AOut,PNum,L1,VNum,L2),
+        setL1(G1,G2,V,L1),
+        setL2(G2,GOut,V,L2).
+dfs_l1l2_list(G,GOut,V,[H|T],A,AOut,L1_In,L1_Out,L2_In,L2_Out):-
+        (   getEdgeType(G,V,H,tree-edge), nonmember(H,A)),!,
+        dfs_l1l2_rec(G,G1,V,H,A,A1,SubL1,SubL2),
+        min(L1_In,SubL1,L1),
+        min_ne([L1_In,L2_In,SubL1,SubL2],L1,L2),
+        dfs_l1l2_list(G1,GOut,V,T,A1,AOut,L1,L1_Out,L2,L2_Out).
+dfs_l1l2_list(G,GOut,V,[H|T],A,AOut,L1_In,L1_Out,L2_In,L2_Out):-
+        getEdgeType(G,V,H,EdgeType),
+        (   EdgeType = frond
+        ;   EdgeType = tree-edge, member(H,A)),!,
+        getDFNum(G,H,D),
+        min(L1_In,D,L1),
+        min_ne([L1_In,L2_In,D],L1,L2),
+        dfs_l1l2_list(G,GOut,V,T,A,AOut,L1,L1_Out,L2,L2_Out).
+dfs_l1l2_list(G,G,_,[],A,A,L1,L1,L2,L2).
+
+dfs_w(G,GOut):-
+        Root = G.get(root),
+        add_edge_property(G,G1,w,"W"),
+        dfs_w_rec(G1,GOut,Root).
+dfs_w_rec(G,GOut,V):-
+        getAdj(G,V,Adj),
+        dfs_w_list(G,GOut,V,Adj).
+dfs_w_list(G,GOut,V,[H|T]):-
+        getDFNum(G,V,DV),
+        getDFNum(G,H,DH),
+        DH < DV,!,
+        dfs_w_list(G,GOut,V,T).
+dfs_w_list(G,GOut,V,[H|T]):-
+        getDFNum(G,V,DV),
+        getDFNum(G,H,DH),
+        DH > DV,
+        getEdgeType(G,V,H,frond),!,
+        W is 2*DH,
+        setEdgeWeight(G,G1,V,H,W),
+        dfs_w_list(G1,GOut,V,T).
+dfs_w_list(G,GOut,V,[H|T]):-
+        getDFNum(G,V,DV),
+        getDFNum(G,H,DH),
+        DH > DV,
+        getEdgeType(G,V,H,tree-edge),
+        getL1(G,H,L1),
+        getL2(G,H,L2),
+        (   L1 = DV
+        ->  W is 2*L2
+        ;   W is 2*L2 + 1),!,
+        setEdgeWeight(G,G1,V,H,W),
+        dfs_w_rec(G1,G2,H),
+        dfs_w_list(G2,GOut,V,T).
+dfs_w_list(G,G,_,[]).
+
+
+
 graph1([
         edge(a,b),
         edge(a,h),
@@ -396,8 +535,6 @@ graph1([
        ]).
 
 
-
-
 test:-
         Edges = [edge(a,d),edge(a,b),edge(b,c),edge(b,d), edge(c,d)],
         edges_to_dict(Edges,GraphDict),
@@ -415,7 +552,7 @@ test:-
         show_dot(G5).
 
 graph2([
-        edge(0,a),
+        edge(1,a),
         edge(a,b),
         edge(b,u),
 
@@ -430,7 +567,7 @@ graph2([
 
         edge(u,x),
         edge(x,c),
-        edge(c,0),
+        edge(c,1),
 
         edge(u,w),
         edge(u,w),
@@ -439,16 +576,16 @@ graph2([
         edge(wt,b),
 
         edge(u,b)
-
-
        ]).
 
 test1:-
-        graph2(Edges),
+        graph1(Edges),
         edges_to_dict(Edges,G0),
-        write(G0),
         dfs_fronds(G0,G2),
         dfs_dfnum(G2,G3),
         dfs_ancestor(G3,G4),
         dfs_t(G4,G5),
-        show_dot(G5,[dfnum,t]).
+        dfs_l1l2(G5,G6),
+        dfs_w(G6,G7),
+%        writeln(G7),
+        show_dot(G7,[dfnum,l1,l2,w]).

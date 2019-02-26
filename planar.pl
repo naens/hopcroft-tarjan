@@ -505,6 +505,68 @@ dfs_w_list(G,GOut,V,[H|T]):-
         dfs_w_list(G2,GOut,V,T).
 dfs_w_list(G,G,_,[]).
 
+%% sort the adjacency lists
+sort_adjacency_list(G,GOut,V,NewAdj):-
+        getAdj(G,V,Adj),
+        make_wname_list(G,V,Adj,List,NoWList),
+        sort_wname_list(List,ListSorted),
+        make_simple_adjlist(ListSorted,AdjSorted),
+        append(AdjSorted,NoWList,NewAdj),
+        setAdj(G,GOut,V,NewAdj).
+
+make_wname_list(G,V,[H|T],[[[W,H]]|L],NoWList):-
+        getEdgeWeight(G,V,H,W),!,
+        make_wname_list(G,V,T,L,NoWList).
+make_wname_list(G,V,[H|T],List,[H|NoWList]):-
+        \+ getEdgeWeight(G,V,H,_),!,
+        make_wname_list(G,V,T,List,NoWList).
+make_wname_list(_,_,[],[],[]).
+
+make_simple_adjlist([[_,Name]|T],[Name|T2]):-
+        make_simple_adjlist(T,T2),!.
+make_simple_adjlist([],[]).
+
+sort_wname_list(L,R):-
+        sort_wname_list1(L,[R]).
+sort_wname_list1([],[[]]):-!.
+sort_wname_list1([X],[X]):-!.
+sort_wname_list1(L,R):-
+        L = [_,_|_],!,
+        sort_wname_list0(L,L1),
+        sort_wname_list1(L1,R).
+sort_wname_list0([A,B|T],[C|T2]):-
+        sort_wname_merge(A,B,C),
+        sort_wname_list0(T,T2).
+sort_wname_list0([A],[A]):-!.
+sort_wname_list0([],[]).
+
+sort_wname_merge([H1|T1],[H2|T2],[H1|T]):-
+        H1 = [W1,_],
+        H2 = [W2,_],
+        W1 < W2,!,
+        sort_wname_merge(T1,[H2|T2],T).
+sort_wname_merge([H1|T1],[H2|T2],[H2|T]):-
+        H1 = [W1,_],
+        H2 = [W2,_],
+        W1 >= W2,!,
+        sort_wname_merge([H1|T1],T2,T).
+sort_wname_merge([],L,L):-!.
+sort_wname_merge(L,[],L).
+
+dfs_sort_adj(G,GOut):-
+        Root = G.get(root),
+        dfs_sort_adj_rec(G,GOut,Root,[],_).
+dfs_sort_adj_rec(G,GOut,V,A,AOut):-
+        sort_adjacency_list(G,G1,V,NewAdj),
+        dfs_sort_adj_list(G1,GOut,NewAdj,[V|A],AOut).
+dfs_sort_adj_list(G,GOut,[H|T],A,AOut):-
+        nonmember(H,A),!,
+        dfs_sort_adj_rec(G,G1,H,A,A1),
+        dfs_sort_adj_list(G1,GOut,T,A1,AOut).
+dfs_sort_adj_list(G,GOut,[H|T],A,AOut):-
+        member(H,A),!,
+        dfs_sort_adj_list(G,GOut,T,A,AOut).
+dfs_sort_adj_list(G,G,[],A,A).
 
 
 graph1([
@@ -587,5 +649,7 @@ test1:-
         dfs_t(G4,G5),
         dfs_l1l2(G5,G6),
         dfs_w(G6,G7),
-%        writeln(G7),
-        show_dot(G7,[dfnum,l1,l2,w]).
+%%        writeln(G7),
+        dfs_sort_adj(G7,G8),
+%%        writeln(G8),
+        show_dot(G8,[dfnum,l1,l2,w]).

@@ -97,76 +97,76 @@ merge_lists(L1,L2,Comparator,[H2|T3]):-
         merge_lists(L1,T2,Comparator,T3).
 
 %% accessors
-getAdjKey(Vertex,Key):-
+get_adj_key(Vertex,Key):-
         term_to_atom(adj-Vertex,Key).
-getAdj(Graph,Vertex,Adj):-
-        getAdjKey(Vertex,Key),
+get_adj(Graph,Vertex,Adj):-
+        get_adj_key(Vertex,Key),
         Adj = Graph.get(Key).
-setAdj(GraphIn,GraphOut,Vertex,Adj):-
-        getAdjKey(Vertex,Key),
+set_adj(GraphIn,GraphOut,Vertex,Adj):-
+        get_adj_key(Vertex,Key),
         GraphOut = GraphIn.put(Key,Adj).
 
-getEdgeTypeKey(From,To,Key):-
+get_edge_type_key(From,To,Key):-
         term_to_atom(edge(From,To),Key).
-getEdgeType(Graph,From,To,Type):-
-        getEdgeTypeKey(From,To,Key),
+get_edge_type(Graph,From,To,Type):-
+        get_edge_type_key(From,To,Key),
         Type = Graph.get(Key).
-setEdgeType(GraphIn,GraphOut,From,To,Type):-
-        getEdgeTypeKey(From,To,Key),
+set_edge_type(GraphIn,GraphOut,From,To,Type):-
+        get_edge_type_key(From,To,Key),
         GraphOut = GraphIn.put(Key,Type).
 
-getDFNumKey(Vertex,Key):-
+get_dfnum_key(Vertex,Key):-
         term_to_atom(dfnum-Vertex,Key).
-getDFNum(Graph,Vertex,DFNum):-
-        getDFNumKey(Vertex,Key),
+get_dfnum(Graph,Vertex,DFNum):-
+        get_dfnum_key(Vertex,Key),
         DFNum = Graph.get(Key).
-setDFNum(GraphIn,GraphOut,Vertex,DFNum):-
-        getDFNumKey(Vertex,Key),
+set_dfnum(GraphIn,GraphOut,Vertex,DFNum):-
+        get_dfnum_key(Vertex,Key),
         GraphOut = GraphIn.put(Key,DFNum).
 
-getAncestorKey(Vertex,Key):-
+get_ancestor_key(Vertex,Key):-
         term_to_atom(ancestor-Vertex,Key).
-getAncestor(Graph,Vertex,Ancestor):-
-        getAncestorKey(Vertex,Key),
+get_ancestor(Graph,Vertex,Ancestor):-
+        get_ancestor_key(Vertex,Key),
         Ancestor = Graph.get(Key).
-setAncestor(GraphIn,GraphOut,Vertex,Ancestor):-
-        getAncestorKey(Vertex,Key),
+set_ancestor(GraphIn,GraphOut,Vertex,Ancestor):-
+        get_ancestor_key(Vertex,Key),
         GraphOut = GraphIn.put(Key,Ancestor).
 
-getTKey(Vertex,Key):-
+get_t_key(Vertex,Key):-
         term_to_atom(t-Vertex,Key).
-getT(Graph,Vertex,T):-
-        getTKey(Vertex,Key),
+get_t(Graph,Vertex,T):-
+        get_t_key(Vertex,Key),
         T = Graph.get(Key).
-setT(GraphIn,GraphOut,Vertex,T):-
-        getTKey(Vertex,Key),
+set_t(GraphIn,GraphOut,Vertex,T):-
+        get_t_key(Vertex,Key),
         GraphOut = GraphIn.put(Key,T).
 
-getL1Key(V,K):-
+get_l1_key(V,K):-
         term_to_atom(l1-V,K).
-getL1(G,V,L1):-
-        getL1Key(V,K),
+get_l1(G,V,L1):-
+        get_l1_key(V,K),
         L1 = G.get(K).
-setL1(G,GOut,V,L1):-
-        getL1Key(V,K),
+set_l1(G,GOut,V,L1):-
+        get_l1_key(V,K),
         GOut = G.put(K,L1).
 
-getL2Key(V,K):-
+get_l2_key(V,K):-
         term_to_atom(l2-V,K).
-getL2(G,V,L2):-
-        getL2Key(V,K),
+get_l2(G,V,L2):-
+        get_l2_key(V,K),
         L2 = G.get(K).
-setL2(G,GOut,V,L2):-
-        getL2Key(V,K),
+set_l2(G,GOut,V,L2):-
+        get_l2_key(V,K),
         GOut = G.put(K,L2).
 
-getEdgeWeightKey(V1,V2,K):-
+get_edge_weight_key(V1,V2,K):-
         term_to_atom(w-(V1,V2),K).
-getEdgeWeight(G,V1,V2,W):-
-        getEdgeWeightKey(V1,V2,K),
+get_edge_weight(G,V1,V2,W):-
+        get_edge_weight_key(V1,V2,K),
         W = G.get(K).
-setEdgeWeight(G,GOut,V1,V2,W):-
-        getEdgeWeightKey(V1,V2,K),
+set_edge_weight(G,GOut,V1,V2,W):-
+        get_edge_weight_key(V1,V2,K),
         GOut = G.put(K,W).
 
 
@@ -189,7 +189,7 @@ add_edge_property(GraphIn,GraphOut,EPropKey,EPropString):-
 insert_edges([edge(From,To)|Tail],CFrom,CList,GraphIn,GraphOut):-
         From \= CFrom,!,
         reverse(CList,CListR),
-        setAdj(GraphIn,Graph1,CFrom,CListR),
+        set_adj(GraphIn,Graph1,CFrom,CListR),
         insert_edges(Tail,From,[To],Graph1,GraphOut).
 insert_edges([edge(From,To)|Tail],From,CList,GraphIn,GraphOut):-
         CList = [CTo|_],
@@ -200,24 +200,24 @@ insert_edges([edge(From,To)|Tail],From,CList,GraphIn,GraphOut):-
         insert_edges(Tail,From,CList,GraphIn,GraphOut).
 insert_edges([],CFrom,CList,GraphIn,GraphOut):-
         reverse(CList,CListR),
-        setAdj(GraphIn,GraphOut,CFrom,CListR).
+        set_adj(GraphIn,GraphOut,CFrom,CListR).
 
 %% DFS that assigns properties to edges: tree-edge or frond
 dfs_fronds(GraphIn,GraphOut):-
         Root = GraphIn.get(root),
         dfs_fronds_rec(GraphIn,GraphOut,Root,[],_).
 dfs_fronds_rec(GraphIn,GraphOut,Vertex,AccIn,AccOut):-
-        getAdj(GraphIn,Vertex,Adj),
+        get_adj(GraphIn,Vertex,Adj),
         dfs_fronds_list(GraphIn,GraphOut,Vertex,Adj,[Vertex|AccIn],AccOut).
 dfs_fronds_list(GraphIn,GraphOut,Vertex,[H|T],AccIn,AccOut):-
         member(H,AccIn),!,
-        (   getEdgeType(GraphIn,H,Vertex,EdgeType)
-        ->  setEdgeType(GraphIn,Graph1,Vertex,H,EdgeType)
-        ;   setEdgeType(GraphIn,Graph1,Vertex,H,frond)),
+        (   get_edge_type(GraphIn,H,Vertex,EdgeType)
+        ->  set_edge_type(GraphIn,Graph1,Vertex,H,EdgeType)
+        ;   set_edge_type(GraphIn,Graph1,Vertex,H,frond)),
         dfs_fronds_list(Graph1,GraphOut,Vertex,T,AccIn,AccOut).
 dfs_fronds_list(GraphIn,GraphOut,Vertex,[H|T],AccIn,AccOut):-
         nonmember(H,AccIn),!,
-        setEdgeType(GraphIn,Graph1,Vertex,H,tree-edge),
+        set_edge_type(GraphIn,Graph1,Vertex,H,tree-edge),
         dfs_fronds_rec(Graph1,Graph2,H,AccIn,Acc1),
         dfs_fronds_list(Graph2,GraphOut,Vertex,T,Acc1,AccOut).
 dfs_fronds_list(Graph,Graph,_,[],Acc,Acc).
@@ -227,7 +227,7 @@ dfs_count_vertices(Graph,Count):-
         Root = Graph.get(root),
         dfs_count_vertices_rec(Graph,Root,[],_,0,Count).
 dfs_count_vertices_rec(G,V,A,AOut,C,COut):-
-        getAdj(G,V,Adj),
+        get_adj(G,V,Adj),
         C1 is C+1,
         dfs_count_vertices_list(G,Adj,[V|A],AOut,C1,COut).
 dfs_count_vertices_list(G,[H|T],A,AOut,C,COut):-
@@ -244,8 +244,8 @@ dfs_dfnum(GraphIn,GraphOut):-
         add_vertex_property(GraphIn,Graph1,dfnum,"D"),
         dfs_dfnum_rec(Graph1,GraphOut,Root,[Root],_,1,_).
 dfs_dfnum_rec(G,GOut,V,A,AOut,N,NOut):-
-        setDFNum(G,G1,V,N),
-        getAdj(G1,V,Adj),
+        set_dfnum(G,G1,V,N),
+        get_adj(G1,V,Adj),
         dfs_dfnum_list(G1,GOut,Adj,A,AOut,N,NOut).
 dfs_dfnum_list(G,GOut,[H|T],A,AOut,N,NOut):-
         member(H,A),!,
@@ -286,7 +286,7 @@ dfs_dot_rec(G,Vs,Es,V,A,AOut,Out):-
         makeVPropString(G,V,Vs,VPropStr),
         makeVString(V,VPropStr,VStr),
         write(Out,VStr),
-        getAdj(G,V,Adj),
+        get_adj(G,V,Adj),
         dfs_dot_list(G,Vs,Es,V,Adj,A,AOut,Out).
 %% TODO: what if other direction???
 makeEPropString(G,From,To,[[P,S]|T],EPropString):-
@@ -335,7 +335,7 @@ dfs_dot_list(G,Vs,Es,V,[H|T],A,AOut,Out):-
 dfs_dot_list(G,Vs,Es,V,[H|T],A,AOut,Out):-
         minmax(V,H,Min,Max),
         nonmember(edge(Min,Max),A),
-        getEdgeType(G,V,H,frond),!,
+        get_edge_type(G,V,H,frond),!,
         makeEPropString(G,V,H,Es,EPropString),
         makeEString(V,H,frond,EString,EPropString),
         write(Out,EString),
@@ -343,7 +343,7 @@ dfs_dot_list(G,Vs,Es,V,[H|T],A,AOut,Out):-
 dfs_dot_list(G,Vs,Es,V,[H|T],A,AOut,Out):-
         minmax(V,H,Min,Max),
         nonmember(edge(Min,Max),A),
-        getEdgeType(G,V,H,tree-edge),!,
+        get_edge_type(G,V,H,tree-edge),!,
         makeEPropString(G,V,H,Es,EPropString),
         makeEString(V,H,tree-edge,EString,EPropString),
         write(Out,EString),
@@ -356,19 +356,19 @@ dfs_ancestor(GraphIn,GraphOut):-
         add_vertex_property(GraphIn,Graph1,ancestor,"ancestor"),
         dfs_ancestor_rec(Graph1,GraphOut,Root,[],_).
 dfs_ancestor_rec(G,GOut,V,A,AOut):-
-        getAdj(G,V,Adj),
+        get_adj(G,V,Adj),
         dfs_ancestor_list(G,GOut,V,Adj,[V|A],AOut).
 dfs_ancestor_list(G,GOut,V,[H|T],A,AOut):-
         member(H,A),!,
         dfs_ancestor_list(G,GOut,V,T,A,AOut).
 dfs_ancestor_list(G,GOut,V,[H|T],A,AOut):-
         nonmember(H,A),
-        getEdgeType(G,V,H,frond),!,
+        get_edge_type(G,V,H,frond),!,
         dfs_ancestor_list(G,GOut,V,T,A,AOut).
 dfs_ancestor_list(G,GOut,V,[H|T],A,AOut):-
         nonmember(H,A),
-        getEdgeType(G,V,H,tree-edge),!,
-        setAncestor(G,G1,H,V),
+        get_edge_type(G,V,H,tree-edge),!,
+        set_ancestor(G,G1,H,V),
         dfs_ancestor_rec(G1,G2,H,A,A2),
         dfs_ancestor_list(G2,GOut,V,T,A2,AOut).
 dfs_ancestor_list(G,G,_,[],A,A).
@@ -390,24 +390,24 @@ dfs_t(GraphIn,GraphOut):-
         add_vertex_property(GraphIn,Graph1,t,"T"),
         dfs_t_rec(Graph1,GraphOut,Root,[],_,_).
 dfs_t_rec(G,GOut,V,A,AOut,T_Out):-
-        getAdj(G,V,Adj),
+        get_adj(G,V,Adj),
         dfs_t_list(G,G1,V,Adj,[V|A],AOut,[],T_1),
         insert(V,T_1,T_Out),
-        setT(G1,GOut,V,T_Out).
+        set_t(G1,GOut,V,T_Out).
 dfs_t_list(G,GOut,V,[H|T],A,AOut,T_In,T_Out):-
-        getEdgeType(G,V,H,tree-edge),
+        get_edge_type(G,V,H,tree-edge),
         nonmember(H,A),!,
         insert(H,T_In,T_1),
         dfs_t_rec(G,G1,H,A,A1,T_H),
         insert_all(T_H,T_1,T_2),
         dfs_t_list(G1,GOut,V,T,A1,AOut,T_2,T_Out).
 dfs_t_list(G,GOut,V,[H|T],A,AOut,T_In,T_Out):-
-        getEdgeType(G,V,H,tree-edge),
+        get_edge_type(G,V,H,tree-edge),
         member(H,A),!,
         insert(H,T_In,T_1),
         dfs_t_list(G,GOut,V,T,A,AOut,T_1,T_Out).
 dfs_t_list(G,GOut,V,[H|T],A,AOut,T_In,T_Out):-
-        getEdgeType(G,V,H,frond),!,
+        get_edge_type(G,V,H,frond),!,
         insert(H,T_In,T_1),
         dfs_t_list(G,GOut,V,T,A,AOut,T_1,T_Out).
 dfs_t_list(G,G,_,[],A,A,T,T).
@@ -448,23 +448,23 @@ dfs_l1l2(G,GOut):-
         add_vertex_property(G1,G2,l2,"L2"),
         dfs_l1l2_rec(G2,GOut,Root,Root,[],_,_,_).
 dfs_l1l2_rec(G,GOut,P,V,A,AOut,L1,L2):-
-        getAdj(G,V,Adj),
-        getDFNum(G,P,PNum),
-        getDFNum(G,V,VNum),
+        get_adj(G,V,Adj),
+        get_dfnum(G,P,PNum),
+        get_dfnum(G,V,VNum),
         dfs_l1l2_list(G,G1,V,Adj,[V|A],AOut,PNum,L1,VNum,L2),
-        setL1(G1,G2,V,L1),
-        setL2(G2,GOut,V,L2).
+        set_l1(G1,G2,V,L1),
+        set_l2(G2,GOut,V,L2).
 dfs_l1l2_list(G,GOut,V,[H|T],A,AOut,L1_In,L1_Out,L2_In,L2_Out):-
-        (   getEdgeType(G,V,H,tree-edge), nonmember(H,A)),!,
+        (   get_edge_type(G,V,H,tree-edge), nonmember(H,A)),!,
         dfs_l1l2_rec(G,G1,V,H,A,A1,SubL1,SubL2),
         min(L1_In,SubL1,L1),
         min_ne([L1_In,L2_In,SubL1,SubL2],L1,L2),
         dfs_l1l2_list(G1,GOut,V,T,A1,AOut,L1,L1_Out,L2,L2_Out).
 dfs_l1l2_list(G,GOut,V,[H|T],A,AOut,L1_In,L1_Out,L2_In,L2_Out):-
-        getEdgeType(G,V,H,EdgeType),
+        get_edge_type(G,V,H,EdgeType),
         (   EdgeType = frond
         ;   EdgeType = tree-edge, member(H,A)),!,
-        getDFNum(G,H,D),
+        get_dfnum(G,H,D),
         min(L1_In,D,L1),
         min_ne([L1_In,L2_In,D],L1,L2),
         dfs_l1l2_list(G,GOut,V,T,A,AOut,L1,L1_Out,L2,L2_Out).
@@ -475,50 +475,50 @@ dfs_w(G,GOut):-
         add_edge_property(G,G1,w,"W"),
         dfs_w_rec(G1,GOut,Root).
 dfs_w_rec(G,GOut,V):-
-        getAdj(G,V,Adj),
+        get_adj(G,V,Adj),
         dfs_w_list(G,GOut,V,Adj).
 dfs_w_list(G,GOut,V,[H|T]):-
-        getDFNum(G,V,DV),
-        getDFNum(G,H,DH),
+        get_dfnum(G,V,DV),
+        get_dfnum(G,H,DH),
         DH < DV,!,
         dfs_w_list(G,GOut,V,T).
 dfs_w_list(G,GOut,V,[H|T]):-
-        getDFNum(G,V,DV),
-        getDFNum(G,H,DH),
+        get_dfnum(G,V,DV),
+        get_dfnum(G,H,DH),
         DH > DV,
-        getEdgeType(G,V,H,frond),!,
+        get_edge_type(G,V,H,frond),!,
         W is 2*DH,
-        setEdgeWeight(G,G1,V,H,W),
+        set_edge_weight(G,G1,V,H,W),
         dfs_w_list(G1,GOut,V,T).
 dfs_w_list(G,GOut,V,[H|T]):-
-        getDFNum(G,V,DV),
-        getDFNum(G,H,DH),
+        get_dfnum(G,V,DV),
+        get_dfnum(G,H,DH),
         DH > DV,
-        getEdgeType(G,V,H,tree-edge),
-        getL1(G,H,L1),
-        getL2(G,H,L2),
+        get_edge_type(G,V,H,tree-edge),
+        get_l1(G,H,L1),
+        get_l2(G,H,L2),
         (   L1 = DV
         ->  W is 2*L2
         ;   W is 2*L2 + 1),!,
-        setEdgeWeight(G,G1,V,H,W),
+        set_edge_weight(G,G1,V,H,W),
         dfs_w_rec(G1,G2,H),
         dfs_w_list(G2,GOut,V,T).
 dfs_w_list(G,G,_,[]).
 
 %% sort the adjacency lists
 sort_adjacency_list(G,GOut,V,NewAdj):-
-        getAdj(G,V,Adj),
+        get_adj(G,V,Adj),
         make_wname_list(G,V,Adj,List,NoWList),
         sort_wname_list(List,ListSorted),
         make_simple_adjlist(ListSorted,AdjSorted),
         append(AdjSorted,NoWList,NewAdj),
-        setAdj(G,GOut,V,NewAdj).
+        set_adj(G,GOut,V,NewAdj).
 
 make_wname_list(G,V,[H|T],[[[W,H]]|L],NoWList):-
-        getEdgeWeight(G,V,H,W),!,
+        get_edge_weight(G,V,H,W),!,
         make_wname_list(G,V,T,L,NoWList).
 make_wname_list(G,V,[H|T],List,[H|NoWList]):-
-        \+ getEdgeWeight(G,V,H,_),!,
+        \+ get_edge_weight(G,V,H,_),!,
         make_wname_list(G,V,T,List,NoWList).
 make_wname_list(_,_,[],[],[]).
 
@@ -567,6 +567,57 @@ dfs_sort_adj_list(G,GOut,[H|T],A,AOut):-
         member(H,A),!,
         dfs_sort_adj_list(G,GOut,T,A,AOut).
 dfs_sort_adj_list(G,G,[],A,A).
+
+dfs_lowpt(G_in, G_out):-
+        Root = G_in.get(root),
+        add_vertex_property(G_in,G_1,dfnum,"D"),
+        add_vertex_property(G_1,G_2,ancestor,"ancestor"),
+        add_vertex_property(G_2,G_3,l1,"L1"),
+        add_vertex_property(G_3,G_4,l2,"L2"),
+        add_edge_property(G_4,G_5,w,"W"),
+        dfs_lowpt_rec(G_5,G_out,Root,Root,1,_,_,_,[],_).
+dfs_lowpt_rec(G_in,G_out,P,U,D_in,D_out,L1,L2,A_in,A_out):-
+        set_dfnum(G_in,G_1,U,D_in),
+        D_1 is D_in+1,
+        get_adj(G_1,U,Adj),
+        get_dfnum(G_1,P,D_P),
+        dfs_lowpt_list(G_1,G_2,U,Adj,D_1,D_out,D_P,L1,D_in,L2,[U|A_in],A_out),
+        set_l1(G_2,G_3,U,L1),
+        set_l2(G_3,G_out,U,L2).
+dfs_lowpt_list(G_in,G_out,U,[V|Vs],D_in,D_out,L1_in,L1_out,L2_in,L2_out,A_in,A_out):-
+        nonmember(V,A_in),!,
+        set_edge_type(G_in,G_1,U,V,tree-edge),
+        set_edge_type(G_1,G_2,V,U,tree-edge),
+        set_ancestor(G_2,G_3,V,U),
+        dfs_lowpt_rec(G_3,G_4,U,V,D_in,D_1,L1_V,L2_V,A_in,A_1),
+        min(L1_in,L1_V,L1_Curr),
+        min_ne([L1_in,L1_V,L2_in,L2_V],L1_Curr,L2_Curr),
+        (   D_in = L1_V
+        ->  W is 2*L2_V
+        ;   W is 2*L2_V + 1),
+        set_edge_weight(G_4,G_5,U,V,W),
+        dfs_lowpt_list(G_5,G_out,U,Vs,D_1,D_out,L1_Curr,L1_out,L2_Curr,L2_out,A_1,A_out).
+dfs_lowpt_list(G_in,G_out,U,[V|Vs],D_in,D_out,L1_in,L1_out,L2_in,L2_out,A_in,A_out):-
+        member(V,A_in),
+        \+ get_ancestor(G_in,U,V),!,
+        set_edge_type(G_in,G_1,U,V,frond),
+        set_edge_type(G_1,G_2,U,V,frond),
+        get_dfnum(G_1,V,D_V),
+        get_dfnum(G_1,U,D_U),
+        (   D_U < D_V
+        ->  W is 2*D_V,
+            set_edge_weight(G_2,G_3,U,V,W)
+        ;   G_3 = G_2),
+        min(L1_in,D_V,L1_Curr),
+        min_ne([L1_in,D_V,L2_in],L1_Curr,L2_Curr),
+        dfs_lowpt_list(G_3,G_out,U,Vs,D_in,D_out,L1_Curr,L1_out,L2_Curr,L2_out,A_in,A_out).
+dfs_lowpt_list(G_in,G_out,U,[V|Vs],D_in,D_out,L1_in,L1_out,L2_in,L2_out,A_in,A_out):-
+        member(V,A_in),
+        get_ancestor(G_in,U,V),!,
+        write("ancestor of "),write(U),write(": "),writeln(V),
+        dfs_lowpt_list(G_in,G_out,U,Vs,D_in,D_out,L1_in,L1_out,L2_in,L2_out,A_in,A_out).
+dfs_lowpt_list(G,G,_,[],D,D,L1,L1,L2,L2,A,A).
+
 
 
 graph1([
@@ -651,5 +702,13 @@ test1:-
         dfs_w(G6,G7),
 %%        writeln(G7),
         dfs_sort_adj(G7,G8),
-%%        writeln(G8),
+        writeln(G8),
         show_dot(G8,[dfnum,l1,l2,w]).
+
+test2:-
+        graph2(Edges),
+        edges_to_dict(Edges,G_0),
+        dfs_lowpt(G_0,G_1),
+        writeln("dfs_lowpt: finished"),
+        writeln(G_1),
+        show_dot(G_1,[dfnum,l1,l2,w]).

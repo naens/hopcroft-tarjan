@@ -289,10 +289,15 @@ dfs_dot_rec(G,Vs,Es,V,A,AOut,Out):-
         get_adj(G,V,Adj),
         dfs_dot_list(G,Vs,Es,V,Adj,A,AOut,Out).
 %% TODO: what if other direction???
-makeEPropString(G,From,To,[[P,S]|T],EPropString):-
-        makeEPropString(G,From,To,T,SubStr),!,
+getEdgeVal(G,P,From,To,V):-
         term_to_atom(P-(From,To),K),
         (   Val = G.get(K)
+        ->  V = Val
+        ;   term_to_atom(P-(To,From),K2),
+            V = G.get(K2)).
+makeEPropString(G,From,To,[[P,S]|T],EPropString):-
+        makeEPropString(G,From,To,T,SubStr),!,
+        (   getEdgeVal(G,P,From,To,Val)
         ->  string_concat(S,":",S1),
             term_to_atom(Val,ValAtom),
             string_concat(S1,ValAtom,S2),
@@ -535,7 +540,7 @@ sort_wname_list1(L,R):-
         sort_wname_list0(L,L1),
         sort_wname_list1(L1,R).
 sort_wname_list0([A,B|T],[C|T2]):-
-        sort_wname_merge(A,B,C),
+        sort_wname_merge(A,B,C),!,
         sort_wname_list0(T,T2).
 sort_wname_list0([A],[A]):-!.
 sort_wname_list0([],[]).
@@ -710,5 +715,6 @@ test2:-
         edges_to_dict(Edges,G_0),
         dfs_lowpt(G_0,G_1),
         writeln("dfs_lowpt: finished"),
-        writeln(G_1),
-        show_dot(G_1,[dfnum,l1,l2,w]).
+        %%writeln(G_1),
+        dfs_sort_adj(G_1,G_2),
+        show_dot(G_2,[dfnum,l1,l2,w]).
